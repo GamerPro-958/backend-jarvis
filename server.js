@@ -13,27 +13,49 @@ app.use(cors());
 app.use(express.json());
 
 app.post("/chat", async (req, res) => {
+
   try {
+
     const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://your-site-name.com",
-            "X-Title": "Jarvis AI"
-            },
-            body: JSON.stringify(req.body)
-        }
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://your-site-name.com",
+          "X-Title": "Jarvis AI"
+        },
+
+        body: JSON.stringify({
+          ...req.body,
+          stream: true
+        })
+      }
     );
 
-    const data = await response.json();
-    res.json(data);
+    // STREAMING HEADERS
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    // SEND STREAM
+    response.body.on("data", (chunk) => {
+      res.write(chunk);
+    });
+
+    response.body.on("end", () => {
+      res.end();
+    });
 
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
