@@ -112,3 +112,96 @@ app.get("/news", async (req, res) => {
     });
   }
 });
+
+app.get("/news-intel", async (req, res) => {
+  try {
+    const query = req.query.q || "";
+    const category = req.query.category || "general";
+
+    let url = "";
+
+    if (query) {
+      url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=5&apikey=${process.env.GNEWS_API_KEY}`;
+    } else {
+      url = `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&max=5&apikey=${process.env.GNEWS_API_KEY}`;
+    }
+
+    const response = await axios.get(url);
+    const articles = response.data.articles;
+
+    // =========================
+    // INTELLIGENCE PROCESSING
+    // =========================
+    const intelligentNews = articles.map(a => {
+
+      const title = a.title;
+      const desc = a.description || "";
+
+      return {
+        title,
+        url: a.url,
+        source: a.source?.name,
+
+        // 🧠 AI-style summary layer (rule-based “mini intelligence”)
+        summary: `${title}. ${desc}`,
+
+        insight: generateInsight(title, desc),
+        impact: generateImpact(title, desc)
+      };
+    });
+
+    res.json({
+      success: true,
+      query: query || category,
+      articles: intelligentNews
+    });
+
+  } catch (err) {
+    console.error(err.message);
+
+    res.status(500).json({
+      success: false,
+      error: "News Intelligence failed"
+    });
+  }
+});
+
+function generateInsight(title, desc) {
+  const text = (title + " " + desc).toLowerCase();
+
+  if (text.includes("ai") || text.includes("artificial intelligence")) {
+    return "This indicates continued acceleration in AI development and adoption.";
+  }
+
+  if (text.includes("stock") || text.includes("market")) {
+    return "This may impact investor sentiment and short-term market volatility.";
+  }
+
+  if (text.includes("india") || text.includes("government")) {
+    return "This could influence regional policy and economic direction.";
+  }
+
+  if (text.includes("sports")) {
+    return "This affects team rankings and fan engagement globally.";
+  }
+
+  return "This development contributes to ongoing global news cycles.";
+}
+
+function generateImpact(title, desc) {
+  const text = (title + " " + desc).toLowerCase();
+
+  if (text.includes("launch") || text.includes("release")) {
+    return "High impact on consumers and market competition.";
+  }
+
+  if (text.includes("crash") || text.includes("drop")) {
+    return "Negative short-term impact likely.";
+  }
+
+  if (text.includes("rise") || text.includes("growth")) {
+    return "Positive market or public response expected.";
+  }
+
+  return "Moderate informational impact.";
+}
