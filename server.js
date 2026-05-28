@@ -69,42 +69,34 @@ app.listen(3000, () => {
 
 const axios = require("axios");
 
-// ========================================
-// NEWS API ROUTE
-// ========================================
-
 app.get("/news", async (req, res) => {
   try {
     const query = req.query.q || "";
-    const category = req.query.category || "";
-    const country = req.query.country || "us";
+    const category = req.query.category || "general";
+    const lang = "en";
 
     let url = "";
 
-    // SPECIFIC SEARCHES
+    // IF SEARCH QUERY
     if (query) {
-      url =
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&language=en&apiKey=${process.env.NEWS_API_KEY}`;
+      url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=${lang}&max=8&apikey=${process.env.GNEWS_API_KEY}`;
     }
 
-    // CATEGORY HEADLINES
+    // DEFAULT TOP HEADLINES
     else {
-      url =
-        `https://newsapi.org/v2/top-headlines?country=${country}&category=${category}&apiKey=${process.env.NEWS_API_KEY}`;
+      url = `https://gnews.io/api/v4/top-headlines?category=${category}&lang=${lang}&max=8&apikey=${process.env.GNEWS_API_KEY}`;
     }
 
     const response = await axios.get(url);
 
-    const articles = response.data.articles
-      .slice(0, 8)
-      .map(article => ({
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        source: article.source.name,
-        image: article.urlToImage,
-        publishedAt: article.publishedAt
-      }));
+    const articles = response.data.articles.map(article => ({
+      title: article.title,
+      description: article.description,
+      url: article.url,
+      source: article.source?.name,
+      image: article.image,
+      publishedAt: article.publishedAt
+    }));
 
     res.json({
       success: true,
@@ -112,12 +104,11 @@ app.get("/news", async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("NEWS ERROR:", err.response?.data || err.message);
 
     res.status(500).json({
       success: false,
-      error: "Failed to fetch news"
+      error: err.response?.data || err.message
     });
   }
 });
-
