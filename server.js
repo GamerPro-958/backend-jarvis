@@ -65,3 +65,59 @@ app.post("/chat", async (req, res) => {
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
+
+
+const axios = require("axios");
+
+// ========================================
+// NEWS API ROUTE
+// ========================================
+
+app.get("/news", async (req, res) => {
+  try {
+    const query = req.query.q || "";
+    const category = req.query.category || "";
+    const country = req.query.country || "us";
+
+    let url = "";
+
+    // SPECIFIC SEARCHES
+    if (query) {
+      url =
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&language=en&apiKey=${process.env.NEWS_API_KEY}`;
+    }
+
+    // CATEGORY HEADLINES
+    else {
+      url =
+        `https://newsapi.org/v2/top-headlines?country=${country}&category=${category}&apiKey=${process.env.NEWS_API_KEY}`;
+    }
+
+    const response = await axios.get(url);
+
+    const articles = response.data.articles
+      .slice(0, 8)
+      .map(article => ({
+        title: article.title,
+        description: article.description,
+        url: article.url,
+        source: article.source.name,
+        image: article.urlToImage,
+        publishedAt: article.publishedAt
+      }));
+
+    res.json({
+      success: true,
+      articles
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch news"
+    });
+  }
+});
+
